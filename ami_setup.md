@@ -2,13 +2,7 @@
 
 1. Login to AWS Console
   1. atest
- 
-    ```
+    ```
     test
     ```
-
-` `` `
-jkjasdfklfj
-`` ``
-
-dfas
+  2. dfas 

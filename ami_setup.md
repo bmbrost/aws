@@ -5,5 +5,5 @@
 3. Select **Launch Instance** to enter launch wizard.
   1. Choose an Amazon Machine Image (AMI)  
     Select **Ubuntu Server 16.04 LTS (HVM), SSD Volume Type - ami-7c803d1c**
-  2. Choose an Instance Type 
+  2. Choose an Instance Type  
     Select **t2.micro (Free tier eligible)** and proceed to *Configure Instance Details* at bottom.

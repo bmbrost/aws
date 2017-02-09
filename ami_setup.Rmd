@@ -1,0 +1,87 @@
+---
+title: "Amazon Machine Image Setup"
+author: "Brian M. Brost"
+date: "2/9/2017"
+output: html_document
+---
+
+## Launch an AMI via the Web Console
+
+Follow these steps to launch a "stock" Amazon Machine Image (AMI) using the Amazon Web Services web console:
+
+#. Login to [AWS Console](http://www.aws.amazon.com).
+#. Select *EC2* (Elastic Compute Cloud) from the available services.
+#. Select *Launch Instance* to enter launch wizard.
+    i. Choose an Amazon Machine Image --- select *Ubuntu Server 16.04 LTS (HVM), SSD Volume        Type - ami-7c803d1c* and proceed to next step at bottom.
+    ii. Choose an Instance Type --- select *t2.micro (Free tier eligible)* and proceed to next step       at bottom.
+    iii. Configure Instance Details --- leave default values and proceed to next step at bottom.
+    iv. Add Storage --- leave default values and proceed to next step at bottom.
+    v. Add Tags --- leave default values and proceed to next step at bottom.
+    vi. Configure Security Group --- in addition to SSH (22), consider adding the following rules        (port range):  
+        - Custom TCP Rule (8787) for RStudio Server
+        - HTTP (80)
+        - HTTPS (443)
+
+        Proceed to *Review and Launch* at bottom. *Note*: Does changing the source to "Anywhere"           compromise security? Is "My IP" better, and if so, are IP addresses static? 
+#. Launch EC2 instance by selecting *Launch* at bottom.
+#. Selecting an existing key pair or create a new key pair --- either select an existing key pair
+  or create a new key pair. Agree to the terms and select *Launch Instances* at bottom.
+
+## Connect to an EC2 Instance
+
+Establish a remote connecting to an EC2 instance by first navigating to EC2 Instance Manager in the AWS Console (i.e., select *Instances* in left bar). Identify the EC2 instance in the list and select *Connect* at top. Access the EC2 instance using a standalone SSH client with the instructions provided or by following the sequence of steps outlined below:
+
+#. Open SSH client (e.g., Mac OSX Terminal).
+
+#. Modify the security key so it's not publicly viewable:  
+    ```{bash,eval=FALSE}
+chmod 400 /Users/brian.brost/Documents/sandbox/aws/testing.pem
+    ```
+#. Connect to the EC2 instance using Public DNS:
+    ```{bash,eval=FALSE}
+ssh -i "/Users/brian.brost/Documents/sandbox/aws/testing.pem"  
+        ubuntu@ec2-35-161-94-108.us-west-2.compute.amazonaws.com
+    ```  
+*Note*: The public DNS will need to be updated to reflect your specific instance.
+
+## Add a New User to the System
+
+Follow these steps for adding a new user to the AMI and setting permissions to allow remote access:
+
+#. Add a new user to the system:
+    ```{bash,eval=FALSE}
+sudo adduser noaa-usr
+    ```  
+Input and confirm a password for the new user. Note that RStudio Server requires a username and password for web-based access using port 8787. To remove a user from the system:   
+    ```{bash,eval=FALSE}
+sudo userdel -r noaa-usr
+    ```
+
+#. Establishing remote access to the new user account requires creating a .ssh directory, copying the public key to this directory, changing permissions for each, and changing the ownership of the new folder:
+    ```{bash,eval=FALSE}
+sudo mkdir /home/noaa-usr/.ssh/
+sudo chmod 700 /home/noaa-usr/.ssh/
+sudo cp /home/ubuntu/.ssh/authorized_keys /home/noaa-usr/.ssh/
+sudo chmod 600 /home/noaa-usr/.ssh/authorized_keys
+sudo chown -R noaa-usr /home/noaa-usr/
+    ```
+
+#. Update and upgrade package lists:
+    ```{bash,eval=FALSE}
+sudo apt-get update
+sudo apt-get upgrade
+    ```
+
+#. Transfer a file to AWS to confirm permissions are set correctly:
+    ```{bash,eval=FALSE}
+scp -i /Users/brian.brost/Documents/sandbox/aws/testing.pem  
+        /Users/brian.brost/Documents/sandbox/aws/testing.R  
+        noaa-usr@ec2-52-37-94-54.us-west-2.compute.amazonaws.com:
+    ```  
+This will upload a file to /home/noaa-usr/ on the AMI. Can upload to other directories by inserting that location after the colon at the end of the linux command.
+
+For additional details concerning user accounts:
+
+- <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/managing-users.html>
+- <http://superuser.com/questions/286831/how-do-i-copy-files-into-var-www-with-winscp>
+- others?

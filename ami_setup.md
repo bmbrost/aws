@@ -4,6 +4,8 @@
 2. Select **EC2** (Elastic Compute Cloud) from the available services.
 3. Select **Launch Instance** to enter launch wizard.
   1. Step 1: Choose and Amazon Machine Image (AMI)
+  
     Select **Ubuntu Server 16.04 LTS (HVM), SSD Volume Type - ami-7c803d1c**
   2. Step 2: Choose an Instance Type
-		Select **t2.micro (Free tier eligible)**. Proceed to *Configure Instance Details* at bottom.
+  
+   Select **t2.micro (Free tier eligible)**. Proceed to *Configure Instance Details* at bottom.

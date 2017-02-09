@@ -1,6 +1,6 @@
 ## Launch stock Amazon Machine Image via Amazon Web Services Console
 
-1. Login to [AWS Console] (aws.amazon.com)
+1. Login to [AWS Console] (http://www.aws.amazon.com)
 2. Select **EC2** (Elastic Compute Cloud) from the available services.
 3. Select **Launch Instance** to enter launch wizard.
   

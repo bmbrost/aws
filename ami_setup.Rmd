@@ -7,64 +7,74 @@ output: html_document
 
 ## Launch an AMI via the Web Console
 
-Follow these steps to launch a "stock" Amazon Machine Image (AMI) using the Amazon Web Services web console:
+Follow these steps to launch a "stock" Amazon Machine Image (AMI) using the Amazon Web Services (AWS) web console:
 
-#. Login to [AWS Console](http://www.aws.amazon.com).
+#. Log in to the [AWS Console](http://www.aws.amazon.com).
 #. Select *EC2* (Elastic Compute Cloud) from the available services.
-#. Select *Launch Instance* to enter launch wizard.
-    i. Choose an Amazon Machine Image --- select *Ubuntu Server 16.04 LTS (HVM), SSD Volume        Type - ami-7c803d1c* and proceed to next step at bottom.
-    ii. Choose an Instance Type --- select *t2.micro (Free tier eligible)* and proceed to next step       at bottom.
-    iii. Configure Instance Details --- leave default values and proceed to next step at bottom.
-    iv. Add Storage --- leave default values and proceed to next step at bottom.
-    v. Add Tags --- leave default values and proceed to next step at bottom.
-    vi. Configure Security Group --- in addition to SSH (22), consider adding the following rules        (port range):  
+#. Select *Launch Instance* to enter the launch wizard.
+    i. Choose an Amazon Machine Image --- select *Ubuntu Server 16.04 LTS (HVM), SSD 
+      Volume Type - ami-7c803d1c* and proceed to the next step in the wizard.
+    ii. Choose an Instance Type --- select *t2.micro (Free tier eligible)* and proceed to 
+      the next step in the wizard.
+    iii. Configure Instance Details --- leave default values and proceed to the next step 
+      in the wizard.
+    iv. Add Storage --- leave default values and proceed to the next step in the wizard.
+    v. Add Tags --- leave default values and proceed to the next step in the wizard.
+    vi. Configure Security Group --- in addition to SSH (22), consider adding the following           rules (port range):  
         - Custom TCP Rule (8787) for RStudio Server
         - HTTP (80)
         - HTTPS (443)
 
-        Proceed to *Review and Launch* at bottom. *Note*: Does changing the source to "Anywhere"           compromise security? Is "My IP" better, and if so, are IP addresses static? 
-#. Launch EC2 instance by selecting *Launch* at bottom.
-#. Selecting an existing key pair or create a new key pair --- either select an existing key pair
-  or create a new key pair. Agree to the terms and select *Launch Instances* at bottom.
+        Proceed to the next step in the wizard. *Note*: Does changing the source to 
+        "Anywhere" compromise security? If IP addresses are static, is setting the source to 
+        "My IP" a better option?
+#. Launch an EC2 instance by selecting *Launch*.
+#. Select an existing key pair or create a new key pair. If you're creating a new key pair, be sure to save the public key (\*.pem) in a known location. Agree to the terms and select *Launch Instances*. 
+
+
 
 ## Connect to an EC2 Instance
 
-Establish a remote connecting to an EC2 instance by first navigating to EC2 Instance Manager in the AWS Console (i.e., select *Instances* in left bar). Identify the EC2 instance in the list and select *Connect* at top. Access the EC2 instance using a standalone SSH client with the instructions provided or by following the sequence of steps outlined below:
+Establish a remote connection to an EC2 instance by first navigating to the EC2 Instance Manager in the AWS Console (i.e., select *Instances* in the left bar). Identify the EC2 instance in the list and select *Connect* at the top. Access the EC2 instance using a standalone SSH client by following the provided instructions, which are also summarized here: 
 
-#. Open SSH client (e.g., Mac OSX Terminal).
+#. Open an SSH client (e.g., Mac OSX Terminal).
 
 #. Modify the security key so it's not publicly viewable:  
     ```{bash,eval=FALSE}
-chmod 400 /Users/brian.brost/Documents/sandbox/aws/testing.pem
-    ```
-#. Connect to the EC2 instance using Public DNS:
-    ```{bash,eval=FALSE}
-ssh -i "/Users/brian.brost/Documents/sandbox/aws/testing.pem"  
-        ubuntu@ec2-35-161-94-108.us-west-2.compute.amazonaws.com
+chmod 400 /.../public_key.pem
     ```  
-*Note*: The public DNS will need to be updated to reflect your specific instance.
+*Note*: the name and location of the public key need to be updated to relfect your         particular EC2 instance (i.e., modify "/.../public_key.pem" to match the name and location of the public key saved in Step 5 of **Launch an AMI via the Web Console** above).
 
-## Add a New User to the System
+#. Connect to the EC2 instance using the public DNS:
+    ```{bash,eval=FALSE}
+ssh -i "/.../public_key.pem" ubuntu@ec2-xx.us-west-2.compute.amazonaws.com
+    ```  
+*Note*: The name and location of the public key, as well as the public DNS, need to be updated to reflect your particular EC2 instance.
 
-Follow these steps for adding a new user to the AMI and setting permissions to allow remote access:
+
+
+## Add a New User Account
+
+Follow these steps to add a new user to the AMI and configure permissions to allow remote access:
 
 #. Add a new user to the system:
     ```{bash,eval=FALSE}
-sudo adduser noaa-usr
+sudo adduser new_user_name
     ```  
-Input and confirm a password for the new user. Note that RStudio Server requires a username and password for web-based access using port 8787. To remove a user from the system:   
+where, "new_user_name" represents the name of the new account and can be modified as appropriate. Input and confirm a password for the new user. Note that RStudio Server requires a username and password for web-based access on port 8787. To remove a user from the system:   
     ```{bash,eval=FALSE}
-sudo userdel -r noaa-usr
+sudo userdel -r user_name_to_delete
     ```
 
-#. Establishing remote access to the new user account requires creating a .ssh directory, copying the public key to this directory, changing permissions for each, and changing the ownership of the new folder:
+#. Remote access to the new account requires creating a .ssh directory, copying the public key to this directory, changing permissions for each, and changing the ownership of the new folder:
     ```{bash,eval=FALSE}
-sudo mkdir /home/noaa-usr/.ssh/
-sudo chmod 700 /home/noaa-usr/.ssh/
-sudo cp /home/ubuntu/.ssh/authorized_keys /home/noaa-usr/.ssh/
-sudo chmod 600 /home/noaa-usr/.ssh/authorized_keys
-sudo chown -R noaa-usr /home/noaa-usr/
-    ```
+sudo mkdir /home/new_user_name/.ssh/
+sudo chmod 700 /home/new_user_name/.ssh/
+sudo cp /home/ubuntu/.ssh/authorized_keys /home/new_user_name/.ssh/
+sudo chmod 600 /home/new_user_name/.ssh/authorized_keys
+sudo chown -R new_user_name /home/new_user_name/
+    ```  
+*Note*: The paths above need to be update to reflect the name of the new user account.
 
 #. Update and upgrade package lists:
     ```{bash,eval=FALSE}
@@ -74,14 +84,278 @@ sudo apt-get upgrade
 
 #. Transfer a file to AWS to confirm permissions are set correctly:
     ```{bash,eval=FALSE}
-scp -i /Users/brian.brost/Documents/sandbox/aws/testing.pem  
-        /Users/brian.brost/Documents/sandbox/aws/testing.R  
-        noaa-usr@ec2-52-37-94-54.us-west-2.compute.amazonaws.com:
+scp -i /.../public_key.pem /.../file_to_upload.* new_user_name@ec2-xx.us-west-2.compute.amazonaws.com:
     ```  
-This will upload a file to /home/noaa-usr/ on the AMI. Can upload to other directories by inserting that location after the colon at the end of the linux command.
+*Note*: Replace the name and location of the public key and file to upload, as well as the public DNS of the AMI, as appropriate. Executing this command uploads the file to /home/new_user_name/. If uploading to a different directory is desired, specify the path after the colon in the public DNS.
 
 For additional details concerning user accounts:
 
 - <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/managing-users.html>
 - <http://superuser.com/questions/286831/how-do-i-copy-files-into-var-www-with-winscp>
-- others?
+
+
+
+## Install R and OpenBlas Library on AMI
+
+Before installing R on the AMI, first update the repository sources to include CRAN:
+
+#. Open the sources.list file:
+    ```{bash,eval=FALSE}
+sudo nano /etc/apt/sources.list.d/sources.list
+    ```
+
+#. Add the R repository location to the end of the sources.list file:
+    ```{bash,eval=FALSE}
+deb http://cran.rstudio.com/bin/linux/ubuntu trusty/
+    ```
+#. Save the updated sources.list file (ctrl-O and enter) and exit (ctrl-X).
+
+#. Update the system to reflect the addition of CRAN:
+    ```{bash,eval=FALSE}
+sudo apt-get update
+    ```
+
+Follow these steps to install R and the OpenBlas library:
+
+#. Install the latest version of R:
+    ```{bash,eval=FALSE}
+sudo apt-get install r-base
+    ```
+ 
+#. Install the OpenBlas library to optimize linear algebra operations:
+    ```{bash,eval=FALSE}
+sudo apt-get install libopenblas-base
+    ```
+ 	  
+#. Test the performance of the optimized linear algebra library. Open R:
+    ```{bash,eval=FALSE}
+R
+    ```  
+Next, run the benchmark test in R:
+    ```{R,eval=FALSE}
+source("http://r.research.att.com/benchmarks/R-benchmark-25.R")
+    ```
+
+For additional details about adding the CRAN repository:
+
+- <https://cran.rstudio.com/bin/linux/ubuntu/README.html>
+- <https://help.ubuntu.com/community/Repositories/CommandLine>
+	  
+	
+	
+## Install RStudio Server (Optional)
+
+RStudio Server provides access to RStudio on the AMI via a web browser. To install RStudio Server on the AMI, follow these steps:
+
+#. Install gdebi to allow installation of local deb packages:
+    ```{bash,eval=FALSE}
+sudo apt-get install gdebi-core
+    ```
+
+#. Optional(?) package:
+    ```{bash,eval=FALSE}
+sudo apt-get install libapparmor1
+    ```
+
+#. Change to writeable directory:
+    ```{bash,eval=FALSE}
+cd /tmp
+    ```
+
+#. Download the RStudio Server deb package (update code to reflect the latest version of the software):
+    ```{bash,eval=FALSE}
+wget download2.rstudio.org/rstudio-server-1.0.136-amd64.deb
+    ```  
+    *Note*: The "https://" portion of the web address provided on the 
+    [RStudio website](https://www.rstudio.com/products/rstudio/download-server/) has been
+    removed here. 
+		
+#. Install RStudio Server:
+    ```{bash,eval=FALSE}
+sudo gdebi rstudio-server-1.0.136-amd64.deb
+    ```
+
+#. Remove installation files:
+    ```{bash,eval=FALSE}
+sudo rm /tmp/rstudio-server-1.0.136-amd64.deb
+    ```
+
+#. Open RStudio Server by navigating to the public DNS of the AMI on port 8787 in a web browser:
+    ```{bash,eval=FALSE}
+ec2-xxx.us-west-2.compute.amazonaws.com:8787
+    ```  
+*Note*: The public DNS needs to be updated to reflect the DNS obtained in Step 5 of **Launch an AMI via the Web Console** above. Enter the username and password established during Step 1 of **Add a New User Account** above. 
+    
+For additional details about installing RStudio Server:
+
+- <https://www.rstudio.com/products/rstudio/download-server/>
+	
+
+
+## Install spatial libraries
+
+Follow these steps to install the Proj.4, Geos, and GDAL spatial libraries:
+
+#. Install the dev package for Proj.4:
+    ```{bash,eval=FALSE}
+sudo apt-get install libproj-dev proj-data proj-bin
+    ```  
+
+#. Install the dev package for Geos:
+    ```{bash,eval=FALSE}
+sudo apt-get install libgeos-dev
+    ```  
+
+#. Install GDAL. Three options for installing GDAL are described: (1) binary package, (2) UbuntuGIS PPA, and (3) from source code. Installing from source code may be the best option for ensuring installation of the latest version of GDAL.
+
+    i. GDAL binary package --- the version of GDAL in the repository is probably out-of-date.           Therefore, instructions on the
+        [GRASS-wiki](https://grasswiki.osgeo.org/wiki/Compile_and_Install_Ubuntu#PROJ.4)
+        to use the pre-compiled dev pacakge, i.e.,
+        ```{bash,eval=FALSE}
+        sudo apt-get install libgdal-dev
+        sudo apt-get install python-gdal gdal-bin 
+        ```  
+        may install an old version of GDAL.
+    ii. UbuntuGIS PPA binary package --- the GDAL binary from 
+        [UbuntuGIS PPA](https://launchpad.net/~ubuntugis/+archive/ubuntu/ppa) may be up-to-date.
+        If so, add the UbuntuGIS PPA to the system sources, update the package lists,
+        and install the GDAL binary:
+
+        ```{bash,eval=FALSE}
+        sudo add-apt-repository ppa:ubuntugis/ppa 
+        sudo apt-get update
+        sudo apt-get install gdal-bin
+        ```  
+        See http://www.sarasafavi.com/installing-gdalogr-on-ubuntu.html for additional details.
+    iii. Compile from source --- this may be the only option for obtaining the latest
+        version of GDAL. First, download the source code:
+        ```{SQL,eval=FALSE}
+        cd /tmp
+        sudo wget http://download.osgeo.org/gdal/2.1.3/gdal-2.1.3.tar.gz
+        sudo tar xvfz gdal-2.1.3.tar.gz
+        cd gdal-2.1.3 
+        ```  
+        Next, configure, build, and install the software:
+        ```{bash,eval=FALSE}
+        sudo ./configure
+        sudo make
+        sudo make install  
+        
+        sudo ldconfig
+        ```  
+        Finally, delete the install files:
+        ```{R,eval=FALSE}
+        sudo rm -r /tmp/gdal-2.1.3
+        sudo rm /tmp/gdal-2.1.3.tar.gz
+        ```  
+        For additional details about installing the spatial libraries:
+
+          - <http://gis.stackexchange.com/questions/21728/installing-gdal-1-9-0-on-linux-ubuntu-server-10-04/21739#21739>
+          - <http://trac.osgeo.org/gdal/wiki/BuildingOnUnix>
+          - <https://grasswiki.osgeo.org/wiki/Compile_and_Install_Ubuntu#PROJ.4>
+          
+        *Note*: the Python dependencies provided in the web links have been omitted here.
+	
+#. Verify GDAL installation:
+    ```{bash,eval=FALSE}
+    gdal-config --version
+    ```  
+        2.1.3
+    ```{bash,eval=FALSE}
+    gdal-config --libs
+    ```  
+        -L/usr/local/lib -lgdal
+    ```{bash,eval=FALSE}
+    gdal-config --cflags 
+    ```  
+        -I/usr/local/include
+
+
+
+## Install R packages
+
+To install R packages from the command line:
+```{eval=FALSE}
+wget http://cran.r-project.org/src/contrib/Archive/sp/sp_0.9-37.tar.gz
+sudo CMD INSTALL sp_0.9-37.tar.gz
+```
+
+To install R packages from the R prompt, first open R:
+```{bash,eval=FALSE}
+sudo R
+```  
+Then proceed as usual:
+```{R,eval=FALSE}
+chooseCRANmirror(ind=53)  # Mirror in OR
+install.packages("rgdal") 
+install.packages("rgeos") 
+install.packages("raster")
+install.packages("sp")
+install.packages("gdistance") 
+install.packages("devtools")
+devtools::install_github("edzer/sfr")  # Error on install
+```  
+
+## Interacting with an EC2 Instance
+
+#### Uploading files
+
+To upload a file to an EC2 instance from the command line:
+
+```{bash,eval=FALSE}
+	$ scp -i /.../public_key.pem /.../file_to_upload.* new_user_name@ec2-xx.us-west-2.compute.amazonaws.com:
+```
+
+Files can also be uploaded to EC2 using the *Upload* button in the "Files" tab of RStudio Server.
+	
+
+#### Run R script in batch mode
+ 
+R scripts can be run in batch mode by first connecting to an EC2 instance (see **Connect to an EC2 instance** above), uploading a script file, R workspace, etc., and executing the following commands:
+```{bash,eval=FALSE}
+$ cd home/new_user_name
+$ R CMD BATCH script_file.R &
+```
+
+
+
+#### Downloading files
+
+To download a file from an EC2 instance from the command line:
+```{bash,eval=FALSE}
+	scp -i /.../public_key.pem
+	new_user_name@ec2-xx.us-west-2.compute.amazonaws.com:/home/new_user_name/file_to_download.*
+	    /.../
+```
+
+
+
+
+
+
+###
+### Stop AMI Instance
+###
+
+# Install AWS Command Line Tools
+ 
+	$sudo apt install awscli
+
+# Instance ID
+
+	wget -q -O - http://169.254.169.254/latest/meta-data/instance-id
+
+# Set default AWS region
+ 
+	export AWS_DEFAULT_REGION=us-east-1
+
+# Check instance state # Replace with Instance ID from above
+ 
+	aws ec2 describe-instances --instance-ids i-0e1c5df07c43ac59d --output text | grep -w
+	STATE | awk '{print $3}'
+
+# Stop instance
+	
+	aws ec2 stop-instances --instance-ids
+
+

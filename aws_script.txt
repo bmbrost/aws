@@ -1,0 +1,393 @@
+Some resources :
+
+http://randyzwitch.com/r-amazon-ec2/
+http://randyzwitch.com/wp-content/uploads/2013/04/amazon-ec2-rstudio.txt
+https://www.r-statistics.com/2015/06/setting-rstudio-server-using-amazon
+-web-services-aws-a-step-by-step-screenshots-tutorial/
+
+
+###
+### Launch stock Amazon Machine Image via Amazon Web Services Console
+### 
+
+# 1.) Login to AWS Console (aws.amazon.com).
+
+# 2.) Select EC2 (Elastic Compute Cloud) from available services.
+
+# 3.) Select "Launch Instance" to enter launch wizard.
+
+# 4.) Step 1: Choose an Amazon Machine Image
+
+		Select "Ubuntu Server 16.04 LTS (HVM), SSD Volume Type - ami-7c803d1c."
+
+# 5.) Step 2: Choose an Instance Type
+
+		Select "t2.micro (Free tier eligible)" or other instance depending on computing resources. Proceed to "Configure Instance Details" at bottom.
+
+# 6.) Step 3: Configure Instance Details 
+
+		Leave default values and proceed to "Add Storage" at bottom.
+
+# 7.) Step 4: Add Storage
+
+		Leave default values and proceed to "Add Tags" at bottom. 
+
+# 8.) Step 5: Add Tags
+
+		Leave default values and proceed to "Configure Security Group" at bottom.
+ 
+# 9.) Step 6: Configure Security Group
+
+		In addition to SSH (22), add the following rules (Type and port range):
+			- HTTP (80)
+			- HTTPS (443)
+			- Custom TCP Rule (8787) for RStudio Server
+		Change Source to "Anywhere" or "My IP" for all rules??? Does my IP address change at all???
+		
+		Select "Review and Launch" at bottom.
+
+# 10.) Review details and launch EC2 instance by selecting "Launch" at bottom.
+		
+# 11.) Selecting an existing key pair or create a new key pair
+
+		Either select an existing key pair or create a new key pair. Agree to the terms and select "Launch Instances" at bottom.
+
+		
+###
+### Connect to EC2 instance
+###
+ 
+# 1.) Navigate to EC2 Instance Manger in the AWS Console (i.e., select 	 
+	  "Instances" in left bar). Identify your instance in the list and select "Connect" at top. Access your instance using a standalone SSH client with the instructions provided or by following the sequence of steps below.
+
+# 2.) Open SSH client (e.g., Mac OSX Terminal).
+
+# 3.) Modify your security key so it's not publicly viewable using:
+
+ 		$ chmod 400 /Users/brian.brost/Documents/sandbox/aws/testing.pem
+	
+# 4.) Connect to instance using Public DNS:
+
+		$ ssh -i "/Users/brian.brost/Documents/sandbox/aws/testing.pem" ubuntu@ec2-35-161-94-108.us-west-2.compute.amazonaws.com
+		
+		Enter "yes" if asked "Are you sure you want to continue connecting (yes/no)?"
+
+
+###
+### Add a new user to the system
+###
+
+# For details, see "Managing User Accounts on Your Linux Instance" at
+# http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/managing-users.html
+
+# For additional details, also see 
+	a.) http://superuser.com/questions/286831/how-do-i-copy-files-into-var-www-
+		with-winscp
+	b.) http:// others...
+
+# 1.) Add new user to the system with:
+
+		$ sudo adduser noaa-usr
+
+	  Input and confirm password for new user. Note that RStudio Server requires a username and password for web-based access.
+	  
+	  To remove a user from the system: 
+		
+		$ sudo userdel -r <insert-user-name-here>
+
+# 2.) To provide remote access to this new account:
+	
+	a.) Create a .ssh directory in new user home directory and change
+		permissions
+		
+		$ sudo mkdir /home/noaa-usr/.ssh/
+		$ sudo chmod 700 /home/noaa-usr/.ssh/
+	
+	b.) Copy public key to .ssh directory and change permissions	
+
+		$ sudo cp /home/ubuntu/.ssh/authorized_keys /home/noaa-usr/.ssh/
+		$ sudo chmod 600 /home/noaa-usr/.ssh/authorized_keys
+
+	c.) Change ownership of new folder
+	
+		$ sudo chown -R noaa-usr /home/noaa-usr/
+	
+		# Check owner and group...
+		$ sudo ls -l /home/noaa-usr/.ssh
+
+# 3.) Update and upgrade package lists
+
+		$ sudo apt-get update
+		$ sudo apt-get upgrade
+
+# 4.) Confirm permissions are set by transferring a file to AWS:
+
+		$ scp -i /Users/brian.brost/Documents/sandbox/aws/testing.pem /Users/brian.brost/Documents/sandbox/aws/testing.R noaa-usr@ec2-52-37-94-54.us-west-2.compute.amazonaws.com:
+
+		This will upload a file to /home/noaa-usr/ on the AMI. Can upload to other directories by inserting that location after the colon at the end of the linux command.
+
+
+
+###
+### Add CRAN Repository to system
+###
+
+# For details, see https://cran.rstudio.com/bin/linux/ubuntu/README.html
+# Also see https://help.ubuntu.com/community/Repositories/CommandLine
+
+# 1.) Open sources.list file.
+
+		$ sudo nano /etc/apt/sources.list.d/sources.list
+
+# 2.) Add R repository location to end of sources.list file:
+	
+		deb http://cran.rstudio.com/bin/linux/ubuntu trusty/
+		
+		Then control-O and enter to save, control-X to exit
+		# Somehow I ended up with sources.list.d file in /home/
+
+# 3.) Update files to use CRAN mirror
+ 
+		$ sudo apt-get update
+
+
+###
+### Install R and OpenBlas library
+###
+
+# For details, see https://www.rstudio.com/products/rstudio/download-server/
+
+# 1.) Install latest version of R:
+ 
+		$ sudo apt-get install r-base
+
+		Enter "Y" when prompted about additional disk space used and installing
+		unauthenticated packages without verification
+
+# 2.) Install multi-threaded OpenBlas library to optimize linear algebra
+ 	  operations.
+ 	  
+		$ sudo apt-get install libopenblas-base
+		
+# 3.) Perform benchmark test in R:
+		
+		$ R
+		> source("http://r.research.att.com/benchmarks/R-benchmark-25.R")
+		> quit() 
+	
+
+###
+### Install RStudio Server
+###
+
+# For details, see https://www.rstudio.com/products/rstudio/download-server/
+
+# 1.) Install gdebi to allow installation of local deb packages
+
+		$ sudo apt-get install gdebi-core
+
+		Installing this package appears not to be necessary:
+		
+		$ sudo apt-get install libapparmor1
+
+# 2.) Change to writeable directory
+ 
+		$ cd /tmp
+
+# 3.) Download RStudio's deb package (Check website for latest version)
+ 
+		$ wget download2.rstudio.org/rstudio-server-1.0.136-amd64.deb
+		
+		Note that the "https://" portion of the web address provided on the rstudio website has been removed here. 
+		
+
+# 4.) Install Rstudio	
+	
+		$ sudo gdebi rstudio-server-1.0.136-amd64.deb
+
+# 5.) Remove installation files:
+
+		$ sudo rm /tmp/rstudio-server-1.0.136-amd64.deb
+
+
+###
+### Open RStudio Server
+###
+
+# 1.) Open web browser. 
+ 
+# 2.) Navigate to the Public DNS of the AMI on port 8787:
+ 
+	<server_ip>:8787
+
+	where <server_ip> is the address provided in Step 4 of Connect to instance above, e.g., ec2-52-38-46-71.us-west-2.compute.amazonaws.com:8787
+
+	Enter username and password to proceed.
+
+
+###
+### Install spatial libraries
+###
+
+# See https://grasswiki.osgeo.org/wiki/Compile_and_Install_Ubuntu#PROJ.4
+
+# 1.) Install dev package for Proj.4
+
+		$ sudo apt-get install libproj-dev proj-data proj-bin
+
+# 2.) Install dev package for Geos
+
+		$ sudo apt-get install libgeos-dev
+
+# 3.) Install GDAL
+
+	Note: The version of GDAL in the repository is likely out-of-date (e.g., version 1.11.3). Thus, following the instructions on GRASS-Wiki referenced above, i.e., 
+	
+		$ sudo apt-get install libgdal-dev
+		$ sudo apt-get install python-gdal gdal-bin 
+	
+	may install an old version of GDAL. Therefore, use one of the two following options:
+	
+	a.) Install GDAL from source
+
+		See: http://gis.stackexchange.com/questions/21728/
+				installing-gdal-1-9-0-on-linux-ubuntu-server-10-04/21739#21739
+
+			 http://trac.osgeo.org/gdal/wiki/BuildingOnUnix
+
+		Also note that Python dependencies may not be required and are thus omitted below.
+		
+		# Download source code
+		
+			$ cd /tmp
+			# $ sudo apt-get install build-essential python-all-dev 
+			$ sudo wget http://download.osgeo.org/gdal/2.1.3/gdal-2.1.3.tar.gz 
+			$ sudo tar xvfz gdal-2.1.3.tar.gz 
+			$ cd gdal-2.1.3 
+		
+		# Configure, build, and install the software
+		
+			$ sudo ./configure #--with-python 
+			$ sudo make 
+			$ sudo make install
+
+			$ sudo ldconfig
+
+		# Delete install files:
+
+			$ sudo rm -r /tmp/gdal-2.1.3
+			$ sudo rm /tmp/gdal-2.1.3.tar.gz
+
+	b.) Install GDAL using binary from UbuntuGIS PPA (note, this binary may
+	    still be slightly out-of-date, but new than the existing binary)
+
+		# See http://www.sarasafavi.com/installing-gdalogr-on-ubuntu.html
+
+		# Add UbuntuGIS PPA to repository sources
+
+			$ sudo add-apt-repository ppa:ubuntugis/ppa 
+			$ sudo apt-get update
+
+		# Install GDAL package 
+
+			$ sudo apt-get install gdal-bin
+
+# 4.) Verify GDAL installation
+
+	# see :http://www.karambelkar.info/2016/10/gdal-2-on-mac-with-homebrew/
+	 
+	$ gdal-config 
+	--version 2.1.3
+
+	$ gdal-config 
+	--libs -L/usr/local/lib -lgdal
+
+	$ gdal-config --cflags 
+	-I/usr/local/include
+
+
+###
+### Install R packages
+### 
+
+	From Command line:
+
+	wget http://cran.r-project.org/src/contrib/Archive/sp/sp_0.9-37.tar.gz sudo CMD
+	INSTALL sp_0.9-37.tar.gz
+
+
+	From R prompt:
+
+	$ sudo R
+
+	> chooseCRANmirror(ind=53)  # Mirror in OR
+
+	> install.packages("rgdal") 
+	> install.packages("rgeos") 
+	> install.packages("raster")
+	> install.packages("sp")
+	> install.packages("gdistance") 
+	> install.packages("devtools")
+	> devtools::install_github('edzer/sfr')  # Error on install
+
+
+
+###
+### Upload file to EC2 instance
+### 
+
+	# Can also use the "Upload" button in the "Files" tab of RStudio Server Web Interface
+
+	# use '*' to transfer multiple files can you transfer an entire directory?
+	# 
+	
+	$ scp -i /Users/brian.brost/Documents/sandbox/aws/testing.pem
+	/Users/brian.brost/Documents/sandbox/aws/testing.Rdata 
+	ubuntu@ec2-35-167-150-171.us-west-2.compute.amazonaws.com:
+
+	$ scp -i /Users/brian.brost/Documents/sandbox/aws/testing.pem
+	/Users/brian.brost/Documents/sandbox/aws/testing.Rdata 
+	noaa-usr@ec2-35-167-150-171.us-west-2.compute.amazonaws.com:
+	
+###
+### Run R script in batch mode
+### 
+
+
+$ cd home/testing
+$ R CMD BATCH testing.R &
+
+
+###
+### Stop AMI Instance
+###
+
+# Install AWS Command Line Tools
+ 
+	$sudo apt install awscli
+
+# Instance ID
+
+	wget -q -O - http://169.254.169.254/latest/meta-data/instance-id
+
+# Set default AWS region
+ 
+	export AWS_DEFAULT_REGION=us-east-1
+
+# Check instance state # Replace with Instance ID from above
+ 
+	aws ec2 describe-instances --instance-ids i-0e1c5df07c43ac59d --output text | grep -w
+	STATE | awk '{print $3}'
+
+# Stop instance
+	
+	aws ec2 stop-instances --instance-ids
+
+
+###
+### Download file from EC2
+### 
+
+	scp -i /Users/brian.brost/Documents/sandbox/aws/testing.pem
+	ubuntu@ec2-35-167-150-171.us-west-2.compute.amazonaws.com:/home/testing/ testing_out.Rdata /Users/brian.brost/Documents/sandbox/aws/
+
